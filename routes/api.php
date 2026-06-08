@@ -14,3 +14,5 @@ Route::apiResource('categories', CategoryController::class);
 Route::apiResource('products', ProductController::class);
 
 Route::get('getCateory',[ProductController::class,'getCategory']);
+
+Route::post('/products/{product}',[ProductController::class,'update']);
