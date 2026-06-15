@@ -6,8 +6,16 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Events\OtpRequested;
 use App\Models\OtpVerification;
+use App\Models\User;
+use Illuminate\Support\Facades\Validator;
+use Carbon\Carbon;
+use App\Http\Controllers\Api\BaseController;
+use Str;
+use Cache;
+use Hash;
 
-class AuthController extends Controller
+
+class AuthController extends BaseController
 {
     /**
      * Display a listing of the resource.
@@ -75,5 +83,81 @@ class AuthController extends Controller
             'message' => 'email sent'
         ]);
 
+    }
+
+    public function verifyOtp(Request $request)
+    {
+        $validator = Validator::make($request->all(),[
+            'email' => 'required|email:rfc,dns',
+            'otp'=>'required|digits:6'
+        ]);
+
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
+
+        $otp = OtpVerification::where('email',$request->email)
+        ->where('otp',$request->otp)
+        ->where('expires_at','>', Carbon::now())
+        ->first();
+
+        if(!$otp){
+
+            return $this->errorResponse('Otp not found',404);
+
+        }
+
+        $token = Str::random(60);
+
+        Cache::put(
+            'register_'.$token,
+            ['email'=> $request->email],
+            now()->addMinutes(10)
+        );
+
+        return $this->successResponse(['token'=>$token],'Token');
+    }
+
+    public function register(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'name' => 'required|string|max:255',
+            'password' => 'required|min:8|confirmed',
+            'token' => 'required'
+        ]);
+
+        if($validator->fails()){
+            return response()->json($validator->errors(),422);
+        }
+
+        $data = Cache::get('register_'.$request->token);
+
+         if(!$data){
+            return response()->json([
+                'message' => 'Token expired'
+            ],400);
+        }
+
+        $user = User::create([
+            'name' => $request->name,
+            'email' => $data['email'],
+            'password' => Hash::make($request->password)
+        ]);
+
+        Cache::forget('register_'.$request->token);
+
+         // Generate login token
+        $accessToken = $user->createToken('auth-token')->plainTextToken;
+
+        return response()->json([
+            'message' => 'Registration successful',
+            'user' => $user,
+            'token' => $accessToken
+        ],201);
+    }
+
+    public function profile(Request $request)
+    {
+        return $this->successResponse($request->user(),'User Details',200);
     }
 }

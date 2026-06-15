@@ -21,3 +21,9 @@ Route::post('/products/{product}',[ProductController::class,'update']);
 Route::apiResource('users',AuthController::class);
 
 Route::post('/sendOtp',[AuthController::class,'sendOtp']);
+
+Route::post('/verifyOtp',[AuthController::class,'verifyOtp']);
+
+Route::post('/register',[AuthController::class,'register']);
+
+Route::middleware('auth:sanctum')->get('/profile',[AuthController::class,'profile']);
