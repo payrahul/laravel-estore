@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\BaseController;
 use Str;
 use Cache;
 use Hash;
+use Illuminate\Support\Facades\Auth;
 
 
 class AuthController extends BaseController
@@ -149,15 +150,44 @@ class AuthController extends BaseController
          // Generate login token
         $accessToken = $user->createToken('auth-token')->plainTextToken;
 
-        return response()->json([
-            'message' => 'Registration successful',
-            'user' => $user,
-            'token' => $accessToken
-        ],201);
+
+        return $this->successResponse($user,'Registration successful',201);
+
+        // return response()->json([
+        //     'message' => 'Registration successful',
+        //     'user' => $user,
+        //     'token' => $accessToken
+        // ],201);
     }
 
     public function profile(Request $request)
     {
         return $this->successResponse($request->user(),'User Details',200);
+    }
+
+    public function login(Request $request)
+    {
+        $validator = Validator::make($request->all(),
+        [
+            'email'=>'required',
+            'password'=>'required'
+        ]);
+
+        if($validator->fails()){
+            return $this->errorResponse('Validation failed',422,$validator->errors());
+        }
+
+        if(!Auth::attempt($request->only('email','password')) ){
+            return $this->errorResponse('Invalid credentials',401);
+        }
+        
+        $user = Auth::user();
+
+        $token = $user->createToken('api-token')->plainTextToken;
+
+        return $this->successResponse([
+            // 'user'=> $user,
+            'token' =>$token
+        ],'Login successful',200);
     }
 }

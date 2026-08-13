@@ -26,4 +26,11 @@ Route::post('/verifyOtp',[AuthController::class,'verifyOtp']);
 
 Route::post('/register',[AuthController::class,'register']);
 
-Route::middleware('auth:sanctum')->get('/profile',[AuthController::class,'profile']);
+// Route::middleware('auth:sanctum')->get('/profile',[AuthController::class,'profile']);
+
+Route::middleware('auth:sanctum')->group(function(){
+
+    Route::get('/profile',[AuthController::class,'profile']);
+   
+});
+ Route::post('/login',[AuthController::class,'login']);
